@@ -1,0 +1,4 @@
+Unhandled exception at 0x7c34f9dd (msvcr71.dll) in r.exe:
+0xC0000005: Access violation reading location 0xabababab.
+
+Error opening file.

@@ -1,0 +1,61 @@
+
+		Terminal Help
+
+		Multifunctional Inter Computer Data Storage Device
+		Unit Model 18
+		Dimensions: 90 60 90
+		Steel-Case color: Black
+
+	Basic operation on the terminal.
+
+	The terminal allows the user to store and retreive information.
+The input consists of a pressplank with 3 presstons and one Hound with a
+multipurpose tale rod. By manipulating the tale rod towards the user,
+the function of selecting interface items incrementally occurs. 
+The reverse of this manipulations concurs in a negative response from 
+the user interface. By opening the pressplank hatch and securing the Hound
+the user has now access to the step_in(r) function. The step_in(r) 
+function is similar to the enter(c) function on MIC processor devices 
+provided from other manufacturers. Due to patent issues the user is obliged
+to call it "menu mounting". From now on the step_in(r) function will be 
+called "menu mounting" for ease. By injecting the hydrogen in tube
+number 3 and pushing presston number 2 the menu is mounted. 
+Repeat until end of usage.
+
+	Linking the system to an external PCX-compatible device.
+
+	Since the foundation of the Link&Stink technology it is easy for the
+end-user to connect external devices to the terminal. If you are sure that
+both the terminal and the external device are PCX-compatible (this can be
+checked by searching for the Apply-or-Die-Anywhere logo on the footnote of
+the device) you can now contact the administrator. If the administrator is
+not present in the field of view please contact him by mobmail. If mobmail
+is out of reach (anywhere outside Solar 1 and Home) please get yourself to
+the Base Mail Officer. To do so please fill out the Personal Questionare 
+and Request Form #1 in the Post Office. If there is no Postal services
+in your current base location then it really sucks to be you.
+
+
+More help on:
+	Pressplank hatch unlocking
+	Hound securing
+	Rod cleaning
+	Door and Elevator linking
+	Base Mail Officer eating habits
+
+- call the direct mobnumber #0700484848 for technical assistant *
+
+
+
+
+
+
+
+
+
+
+
+
+
+*cost of 3 time units of assistance =
+50 slavery years on planet Balabama.

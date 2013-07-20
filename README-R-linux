@@ -1,0 +1,10 @@
+For sound to work, you need either:
+
+* SDL-mixer with mp3 support (provided SDL-mixer doesn't have this), or
+* Convert mp3 files to ogg vorbis format (keep filename):
+	s/benny.wav
+	s/m/*.wav
+
+Alternately you can try keeping the FMOD sound engine, but I had little 
+success with this myself. FMOD doesn't like ALSA or even ALSA's OSS 
+emulation very much.

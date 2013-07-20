@@ -1,0 +1,613 @@
+diff -ruN source code (orig)/cutscenes.cpp source code/cutscenes.cpp
+--- source code (orig)/cutscenes.cpp	2005-07-11 18:11:06.000000000 +0200
++++ source code/cutscenes.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -16,4 +16,4 @@
+ void CDialogText::RestartDialog()
+ {
+     allTime = count = 0;
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/cutscenes.h source code/cutscenes.h
+--- source code (orig)/cutscenes.h	2006-12-16 22:32:06.000000000 +0100
++++ source code/cutscenes.h	2007-07-19 01:23:44.000000000 +0200
+@@ -105,4 +105,4 @@
+     void SetDialog(char *newText, int newX, int newY, int newTime, int newLastTime, int newFont = 0);
+     void RestartDialog();
+ };
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/engine.cpp source code/engine.cpp
+--- source code (orig)/engine.cpp	2006-12-17 14:30:02.000000000 +0100
++++ source code/engine.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -8,7 +8,7 @@
+ 
+     loadIndex = 0;
+ 
+-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
++    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO) < 0)
+         return 0;
+ 
+     atexit(SDL_Quit);
+@@ -61,8 +61,7 @@
+     amask = 0xff000000;
+ #endif
+ 
+-    bool sb = Sound.Init(44100, 32, FSOUND_MIXER_AUTODETECT);
+-    while ((!Sound.Init(44100, 32, FSOUND_MIXER_AUTODETECT))&&(retry<10))
++    while ((!Sound.Init(44100, 32, 0))&&(retry<10))
+     {
+     	Delay(100);
+     	retry++;
+@@ -750,11 +749,11 @@
+ }
+ 
+ 
+-FSOUND_SAMPLE* CEngine::LoadSound(const char *File)
++Mix_Chunk* CEngine::LoadSound(const char *File)
+ {
+     DrawLoading();
+ 
+-    return FSOUND_Sample_Load(FSOUND_FREE, File, FSOUND_2D, 0, 0);
++    return Sound.LoadSound(File);
+ }
+ 
+ Uint32 CEngine::GetPixel(int x, int y, SDL_Surface *Surf)
+@@ -816,4 +815,4 @@
+ 	}
+ 
+ 	return (int)r;
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/engine.h source code/engine.h
+--- source code (orig)/engine.h	2006-03-05 15:00:58.000000000 +0100
++++ source code/engine.h	2007-07-19 01:23:44.000000000 +0200
+@@ -83,7 +83,7 @@
+ 
+     void ShutSystem();
+ 
+-    SDL_Surface* CEngine::LoadImage(const char *File, int Red, int Green, int Blue);
++    SDL_Surface* LoadImage(const char *File, int Red, int Green, int Blue);
+ 
+     int LoadImageFrames(const char *TileMap, SBITMAP *Images, int NumFrames, int IWidth, int IHeight, int Red, int Green, int Blue);
+ 
+@@ -117,7 +117,7 @@
+ 
+     void DrawLoading();
+ 
+-    FSOUND_SAMPLE* CEngine::LoadSound(const char *File);
++    Mix_Chunk* LoadSound(const char *File);
+ 
+ 	Uint32 GetPixel(int x, int y, SDL_Surface *Surf);
+ 
+@@ -125,4 +125,4 @@
+ };
+ 
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/font.cpp source code/font.cpp
+--- source code (orig)/font.cpp	2006-12-11 01:16:12.000000000 +0100
++++ source code/font.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -225,7 +225,3 @@
+     SDL_FreeSurface(font->font);
+     delete font;
+ }
+-
+-
+-
+-
+diff -ruN source code (orig)/font.h source code/font.h
+--- source code (orig)/font.h	2005-07-11 18:10:24.000000000 +0200
++++ source code/font.h	2007-07-19 01:23:44.000000000 +0200
+@@ -45,4 +45,3 @@
+ 
+ // This function destroys the font
+ void freeFont(SDLFont *font);
+-
+diff -ruN source code (orig)/game-action.cpp source code/game-action.cpp
+--- source code (orig)/game-action.cpp	2006-12-22 13:13:50.000000000 +0100
++++ source code/game-action.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -1780,4 +1780,4 @@
+     default:
+         break;
+     }
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/game-AI.cpp source code/game-AI.cpp
+--- source code (orig)/game-AI.cpp	2006-12-16 20:55:34.000000000 +0100
++++ source code/game-AI.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -1172,12 +1172,12 @@
+                         if (Engine.key_0)
+                         {
+                             Dialog.SetDialog("10", DIALOG_HERO_X, DIALOG_HERO_Y, 20, sceneTimer);
+-                            pick = 99923909011;
++                            pick = 923909011;
+                         }
+                     }
+ 
+                     static char buffer[10];
+-                    itoa(pick, buffer, 10);
++                    snprintf(buffer, sizeof(buffer), "%d", pick);
+ 
+                     if ((sceneTimer == Dialog.lastTime + Dialog.duration)&&(Dialog.count == 9))
+                         Dialog.SetDialog(buffer, DIALOG_RIDDLER_X, DIALOG_RIDDLER_Y, 25, sceneTimer);
+diff -ruN source code (orig)/game.cpp source code/game.cpp
+--- source code (orig)/game.cpp	2006-12-22 13:45:36.000000000 +0100
++++ source code/game.cpp	2007-07-19 01:35:09.000000000 +0200
+@@ -688,12 +688,13 @@
+                 }
+                 if (Dialog.time > -1)
+                     Dialog.time -= 1;
+-                if ((useMusicCheck)&&(!FSOUND_GetPaused(Engine.Sound.SpecialChannel)))
++#if 0
++                if ((useMusicCheck)&&(!Engine.Sound.ChannelIsPaused(Engine.Sound.SpecialChannel)))
+                 {
+                     musicCheck++;
+                     if (musicCheck % MUSICMODSTEP == 0)
+                     {
+-                        int k=FSOUND_GetCurrentPosition(Engine.Sound.SpecialChannel);
++                        int k=Engine.Sound.GetCurrentPosition(Engine.Sound.SpecialChannel);
+                         int step = k - oldMusicStep;
+                         //printf("sync %i\n", step);
+ 
+@@ -707,13 +708,14 @@
+                             musicStepCount++;
+                             if ( (k > (musicStepCount*MUSICSTEP + MUSICBOUND)) || (k < (musicStepCount*MUSICSTEP - MUSICBOUND)) )
+                             {
+-                                FSOUND_SetCurrentPosition(Engine.Sound.SpecialChannel, musicStepCount*MUSICSTEP);
++                                Engine.Sound.SetCurrentPosition(Engine.Sound.SpecialChannel, musicStepCount*MUSICSTEP);
+                                 //	printf("Audio out of sync\n");
+                                 //	printf("%i\n", k - musicStepCount*MUSICSTEP);
+                             }
+                         }
+                     }
+                 }
++#endif
+                 if (interruptTimer > -1)
+                 {
+                     interruptTimer--;
+@@ -868,9 +870,9 @@
+         drawString(Engine.Screen, Engine.font, 0, SCREEN_HEIGHT-40, "Sprite: ");
+         drawString(Engine.Screen, Engine.font, 60, SCREEN_HEIGHT-40, editLudensName);
+ 
+-		drawString(Engine.Screen, Engine.font, SCREEN_WIDTH-160, SCREEN_HEIGHT-40, "Sprite Num: ");
+-        itoa(editLudensNum,buffer,10);
+-		drawString(Engine.Screen, Engine.font, SCREEN_WIDTH-80, SCREEN_HEIGHT-40, buffer);
++        drawString(Engine.Screen, Engine.font, SCREEN_WIDTH-160, SCREEN_HEIGHT-40, "Sprite Num: ");
++        snprintf(buffer, sizeof(buffer), "%d", editLudensNum);
++        drawString(Engine.Screen, Engine.font, SCREEN_WIDTH-80, SCREEN_HEIGHT-40, buffer);
+ 
+         // debug
+         if (DEBUG)
+@@ -898,34 +900,35 @@
+             drawString(Engine.Screen, Engine.font, 0, 0, Engine.LastVideoError);
+            
+             drawString(Engine.Screen, Engine.font, 0, 20, "XY");
+-            itoa(Ludens[myLudens].posX >> FIX, buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", Ludens[myLudens].posX >> FIX);
+             drawString(Engine.Screen, Engine.font, 40, 20, buffer);
+-            itoa(Ludens[myLudens].posY >> FIX, buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", Ludens[myLudens].posY >> FIX);
+             drawString(Engine.Screen, Engine.font, 80, 20, buffer);
+ 
+-            itoa(mapNum,buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", mapNum);
+             drawString(Engine.Screen, Engine.font, 0, 40, "map:");
+             drawString(Engine.Screen, Engine.font, 40, 40, buffer);
+ 
+-            itoa(sceneTimer,buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", sceneTimer);
+             drawString(Engine.Screen, Engine.font, 0, 60, "timer:");
+             drawString(Engine.Screen, Engine.font, 40, 60, buffer);
+ 
+-            itoa(fps,buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", fps);
+             drawString(Engine.Screen, Engine.font, 0, 80, "fps:");
+             drawString(Engine.Screen, Engine.font, 40, 80, buffer);
+ 
+-            itoa(Ludens[1].counter,buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", Ludens[1].counter);
+             drawString(Engine.Screen, Engine.font, 0, 100, "c:");
+             drawString(Engine.Screen, Engine.font, 40, 100, buffer);
+-
++#if 0
+             if (useMusicCheck)
+             {
+                 int k = FSOUND_GetCurrentPosition(Engine.Sound.SpecialChannel);
+-                itoa(k,buffer,10);
++                snprintf(buffer, sizeof(buffer), "%d", k);
+                 drawString(Engine.Screen, Engine.font, 0, 120, "mlen:");
+                 drawString(Engine.Screen, Engine.font, 40, 120, buffer);
+             }
++#endif
+         }
+ 
+     if (showHint)
+@@ -2468,7 +2471,7 @@
+ 
+     SaveGame();
+ 
+-    itoa (mapNum, num, 10);
++    snprintf(num, sizeof(num), "%d", mapNum);
+     map = new char[2+strlen(mapName)+strlen(num)+4+1];
+     strcpy(map, "m/");
+     strcat(map, mapName);
+@@ -2907,7 +2910,7 @@
+         drawString(Engine.Screen, Engine.menufont, MENU_STARTX, MENU_STARTY + 0*MENU_SPACE, "Back");
+         for (i=0; i<level+1; i++)
+         {
+-            itoa(i,buffer,10);
++            snprintf(buffer, sizeof(buffer), "%d", i);
+             drawString(Engine.Screen, Engine.menufont, MENU_STARTX, MENU_STARTY + (i+1)*MENU_SPACE, buffer);
+             drawString(Engine.Screen, Engine.menufont, MENU_STARTX + 30, MENU_STARTY + (i+1)*MENU_SPACE, Levels[i]);
+         }
+diff -ruN source code (orig)/game-terminals.cpp source code/game-terminals.cpp
+--- source code (orig)/game-terminals.cpp	2006-12-18 21:46:52.000000000 +0100
++++ source code/game-terminals.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -1291,4 +1291,4 @@
+     }
+ 
+     return;
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/globals.h source code/globals.h
+--- source code (orig)/globals.h	2006-12-17 16:36:10.000000000 +0100
++++ source code/globals.h	2007-07-19 01:23:44.000000000 +0200
+@@ -84,4 +84,3 @@
+ #define TERMINAL_6_3a ( (map == EPISODE_MINES+1)&&(terminalNum == 10) )
+ #define TERMINAL_6_3b ( (map == EPISODE_MINES+1)&&(terminalNum == 14) )
+ #define TERMINAL_6_3c ( (map == EPISODE_MINES+1)&&(terminalNum == 35) )
+-
+diff -ruN source code (orig)/ludens.cpp source code/ludens.cpp
+--- source code (orig)/ludens.cpp	2005-08-18 21:17:54.000000000 +0200
++++ source code/ludens.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -308,4 +308,4 @@
+ 	    setAnimation(ANIM_DEFAULT, ANIM_TERMINAL_SPEED, LEFT, false, true);
+ 	 else
+ 		setAnimation(ANIM_TERMINAL_DEFAULT, ANIM_DEFAULT_SPEED, LEFT, false, true);
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/ludens.h source code/ludens.h
+--- source code (orig)/ludens.h	2006-12-16 18:09:26.000000000 +0100
++++ source code/ludens.h	2007-07-19 01:23:44.000000000 +0200
+@@ -1179,4 +1179,4 @@
+     void InitLudens(int newId, SBITMAP *newImage, SBITMAP *newImageMirror, int newStyle, int newPosX, int newPosY, int newTeam, int newWidth, int newHeight,
+                     int newMaxSpeed, int newGravity, int newRefX, int newRefY, int newRadiusX, int newRadiusY);
+ };
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/Makefile source code/Makefile
+--- source code (orig)/Makefile	1970-01-01 01:00:00.000000000 +0100
++++ source code/Makefile	2007-07-18 23:42:23.000000000 +0200
+@@ -0,0 +1,18 @@
++SRCS=$(wildcard *.cpp)
++OBJS=$(SRCS:%.cpp=%.o)
++HEADERS=$(wildcard *.h)
++
++CXX=g++ -Wno-write-strings
++LIBSTDCXX=`g++ -print-file-name=libstdc++.a`
++CXXFLAGS=-O2 `sdl-config --cflags`
++CXXLIBS=-Wl,-s -Wl,-O1 `sdl-config --libs` -lSDL_mixer
++
++r.bin: $(OBJS)
++	$(CXX) -o $@ -static-libgcc -Wl,--as-needed $(OBJS) $(CXXLIBS) \
++		$(LIBSTDCXX)
++
++%.o: %.cpp $(HEADERS)
++	$(CXX) $(CXXFLAGS) -c $< -o $@
++
++clean:
++	rm -f *.o r.bin
+diff -ruN source code (orig)/part.cpp source code/part.cpp
+--- source code (orig)/part.cpp	2005-08-16 17:39:38.000000000 +0200
++++ source code/part.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -78,4 +78,4 @@
+     if (style != P_LEAFS)
+         setAnimation(ANIM_DEFAULT, newAnimSpeed, RIGHT, false, false);
+ 
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/part.h source code/part.h
+--- source code (orig)/part.h	2005-08-16 17:44:58.000000000 +0200
++++ source code/part.h	2007-07-19 01:23:44.000000000 +0200
+@@ -126,4 +126,4 @@
+     void InitPart(SBITMAP *newImage, int newStyle, int newPosX, int newPosY,
+                   int newMaxSpeed, int newGravity, int newRefX, int newRefY, int newLife, int newAnimSpeed);
+ };
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/platform.h source code/platform.h
+--- source code (orig)/platform.h	2005-07-13 17:56:08.000000000 +0200
++++ source code/platform.h	2007-07-19 01:23:44.000000000 +0200
+@@ -1,6 +1,8 @@
+ // WINDOWS x86
+ 
++#ifdef WIN32
+ #pragma comment(lib, "SDLmain.lib")
++#endif
+ #define SCREEN_PARAMS SDL_DOUBLEBUF | SDL_ANYFORMAT
+ #define SCREEN_WIDTH 1024
+ #define SCREEN_HEIGHT 768
+diff -ruN source code (orig)/preheader.h source code/preheader.h
+--- source code (orig)/preheader.h	2006-12-11 00:56:14.000000000 +0100
++++ source code/preheader.h	2007-07-19 01:23:44.000000000 +0200
+@@ -1,10 +1,10 @@
+-#pragma once
+-
++#pragma once
++
+ #include "SDL.h"
+-#include <stdio.h>
+-#include <math.h>
+-#include "fmod.h"
+-
++#include "SDL_mixer.h"
++#include <stdio.h>
++#include <math.h>
++
+ #include <stdlib.h>
+ #include <stdarg.h>
+-#include <string.h>
++#include <string.h>
+diff -ruN source code (orig)/r.cpp source code/r.cpp
+--- source code (orig)/r.cpp	2005-07-11 18:08:52.000000000 +0200
++++ source code/r.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -33,4 +33,3 @@
+ 
+     return 0;
+ }
+-
+diff -ruN source code (orig)/sound.cpp source code/sound.cpp
+--- source code (orig)/sound.cpp	2006-12-11 01:23:42.000000000 +0100
++++ source code/sound.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -3,32 +3,26 @@
+ 
+ unsigned char  CSound::Init(int mixrate, int maxsoftwarechannels, unsigned int flags)
+ {
+-    inited = FSOUND_Init(mixrate, maxsoftwarechannels, flags);
++    inited = !Mix_OpenAudio(mixrate, MIX_DEFAULT_FORMAT, 2, 1024);
+ 
+-    MusicChannel = FSOUND_FREE;
+-    SpecialChannel = FSOUND_FREE;
+-
+-    //	MusicChannel = FSOUND_PlaySound(FSOUND_FREE, samples[0]);
+-    //	DefaultVolume = FSOUND_GetVolume(MusicChannel);
+-    //	DefaultVolume = -1;
++    MusicChannel = -1;
++    SpecialChannel = -1;
+ 
+     return inited;
+ }
+ 
+ void CSound::PlayMOD(char *file)
+ {
+-    if (!inited)
+-        return;
+-    if ((!inited)||(!playMusics))
++    if (!inited || !playMusics)
+         return;
+ 
+-    FMUSIC_StopSong(mod);
+-    mod = FMUSIC_LoadSong(file);
++    StopMOD();
++    mod = Mix_LoadMUS(file);
+     if (!mod)
+     {
+         return;
+     }
+-    FMUSIC_PlaySong(mod);
++    Mix_PlayMusic(mod, -1);
+ }
+ 
+ void CSound::StopMOD()
+@@ -36,20 +30,21 @@
+     if (!inited)
+         return;
+ 
+-    FMUSIC_StopSong(mod);
++    Mix_FreeMusic(mod);
+ }
+ 
+ 
+ int CSound::PlaySample(int num)
+ {
+-    if ((!inited)||(!playSounds))
++    if (!inited || !playSounds)
+         return -1;
+-    int i;
+ 
+-    i = FSOUND_PlaySound(FSOUND_FREE, samples[num]);
+-    //FSOUND_SetVolume(i, 2*DefaultVolume/3);
++    return Mix_PlayChannel(-1, samples[num], 0);
++}
+ 
+-    return i;
++Mix_Chunk *CSound::LoadSound(const char *File)
++{
++    return Mix_LoadWAV(File);
+ }
+ 
+ void CSound::FreeAll()
+@@ -57,16 +52,24 @@
+     if (!inited)
+         return;
+ 
++    Mix_HaltChannel(-1);
++
+     for (int i=0; i<MAX_SOUNDS; i++)
+-        //if (samples[i])
+-        FSOUND_Sample_Free(samples[i]);
++        if (samples[i])
++        {
++            Mix_FreeChunk(samples[i]);
++            samples[i] = NULL;
++        }
+     for (int i=0; i<MAX_MUSICS; i++)
+-        //if (music[i])
+-        FSOUND_Sample_Free(music[i]);
++        if (music[i])
++        {
++            Mix_FreeChunk(music[i]);
++            music[i] = NULL;
++        }
++
++    StopMOD();
+ 
+-    //FMUSIC_StopSong(mod);
+-    //FMUSIC_FreeSong(mod);
+-    FSOUND_Close();
++    Mix_CloseAudio();
+ }
+ 
+ void CSound::PlayMusic(int num)
+@@ -74,12 +77,10 @@
+     if ((!inited)||(num<0))
+         return;
+ 
+-    StopMusic();
+-    MusicChannel = FSOUND_PlaySound(MusicChannel, music[num]);
+-    DefaultVolume = FSOUND_GetVolume(MusicChannel);
+-    //FSOUND_SetVolume(MusicChannel, DefaultVolume);
+-    //FSOUND_Sample_SetLoopPoints(music[num], 0, FSOUND_Sample_GetLength(music[num]));
+-    FSOUND_SetLoopMode(MusicChannel, FSOUND_LOOP_NORMAL);
++    if (MusicChannel != -1)
++        StopMusic();
++    MusicChannel = Mix_PlayChannel(MusicChannel, music[num], -1);
++    DefaultVolume = Mix_Volume(MusicChannel, -1);
+ 
+     if (playMusics)
+         PauseMusic(false);
+@@ -92,17 +93,13 @@
+     if (!inited)
+         return;
+ 
+-    FSOUND_StopSound(FSOUND_ALL);
++    Mix_HaltChannel(MusicChannel);
+ }
+ 
+ void CSound::PauseMusic(bool set
+                            )
+ {
+-    if (!inited)
+-        return;
+-
+-    FSOUND_SetPaused(MusicChannel, set
+-                        );
++    PauseChannel(MusicChannel, set);
+ }
+ 
+ void CSound::SetMusicVolume(int vol)
+@@ -110,7 +107,8 @@
+     if (!inited)
+         return;
+ 
+-    FSOUND_SetVolume(MusicChannel, vol);
++    if (MusicChannel != -1)
++        Mix_Volume(MusicChannel, vol / 2);
+ }
+ 
+ void CSound::PauseChannel(int ch, bool set
+@@ -119,6 +117,13 @@
+     if (!inited)
+         return;
+ 
+-    FSOUND_SetPaused(ch, set
+-                        );
++    if (set)
++        Mix_Pause(ch);
++    else
++        Mix_Resume(ch);
++}
++
++bool CSound::ChannelIsPaused(int ch)
++{
++    return ch != -1 ? Mix_Paused(ch) : false;
+ }
+diff -ruN source code (orig)/sound.h source code/sound.h
+--- source code (orig)/sound.h	2006-12-17 15:38:58.000000000 +0100
++++ source code/sound.h	2007-07-19 01:23:44.000000000 +0200
+@@ -16,11 +16,11 @@
+ public:
+     unsigned char inited;
+ 
+-    FMUSIC_MODULE *mod;
++    Mix_Music *mod;
+ 
+-    FSOUND_SAMPLE *samples[MAX_SOUNDS];
++    Mix_Chunk *samples[MAX_SOUNDS];
+ 
+-    FSOUND_SAMPLE *music[MAX_MUSICS];
++    Mix_Chunk *music[MAX_MUSICS];
+ 
+     bool playSounds, playMusics;
+ 
+@@ -38,6 +38,8 @@
+ 
+     int  PlaySample(int num);
+ 
++    Mix_Chunk *LoadSound(const char *File);
++
+     void FreeAll();
+ 
+     void PlayMusic(int num);
+@@ -49,6 +51,8 @@
+     void SetMusicVolume(int vol);
+ 
+     void PauseChannel(int ch, bool set);
++
++    bool ChannelIsPaused(int ch);
+ };
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/sprite.cpp source code/sprite.cpp
+--- source code (orig)/sprite.cpp	2005-07-11 18:08:24.000000000 +0200
++++ source code/sprite.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -102,4 +102,4 @@
+ {
+     velX = velY = maxSpeed = gravity = 0 << FIX;
+     active = false;
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/sprite.h source code/sprite.h
+--- source code (orig)/sprite.h	2005-07-11 18:08:12.000000000 +0200
++++ source code/sprite.h	2007-07-19 01:23:44.000000000 +0200
+@@ -48,4 +48,4 @@
+     void setAnimation(int newAnimNum, int newAnimSpeed, int direction, bool block, bool loop);
+     void kill();
+ };
+-#endif
+\ No newline at end of file
++#endif
+diff -ruN source code (orig)/tilemap.cpp source code/tilemap.cpp
+--- source code (orig)/tilemap.cpp	2005-07-11 18:08:02.000000000 +0200
++++ source code/tilemap.cpp	2007-07-19 01:23:44.000000000 +0200
+@@ -48,4 +48,4 @@
+     backgroundRed = Red;
+     backgroundGreen = Green;
+     backgroundBlue = Blue;
+-}
+\ No newline at end of file
++}
+diff -ruN source code (orig)/tilemap.h source code/tilemap.h
+--- source code (orig)/tilemap.h	2005-07-13 17:12:40.000000000 +0200
++++ source code/tilemap.h	2007-07-19 01:23:44.000000000 +0200
+@@ -108,4 +108,4 @@
+     void animate();
+     void SetBackground(int Red, int Green, int Blue);
+ };
+-#endif
+\ No newline at end of file
++#endif

@@ -1,0 +1,2 @@
+These are the original music file used for R's soundtrack. They will sound differently of course because various soundfonts were used for the end result.
+The files can be opened with Guitar Pro tablature editor/player (www.guitar-pro.com).
